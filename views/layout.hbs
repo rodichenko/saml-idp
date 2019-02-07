@@ -4,7 +4,8 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Simple Identity Provider</title>
+    <title>{{appearance.title}}</title>
+    <link rel="icon" type="image/png" href="favicon.png">
     <link href="/dist/fontawesome/css/font-awesome.css" rel="stylesheet">
     <link href="/css/bootstrap.css" rel="stylesheet">
     <link href="/css/main.css" rel="stylesheet">
@@ -14,25 +15,7 @@
     <![endif]-->
   </head>
   <body>
-    <!-- Static navbar -->
-    <nav class="navbar navbar-default">
-      <div class="container-fluid">
-        <div class="navbar-header">
-        <a class="navbar-brand" href="/metadata"><i class="fa fa-key"><span>Simple SAML Identity Provider ({{idp.issuer}})</span></i></a>
-        </div>
-        <div id="navbar" class="navbar-collapse collapse">
-          <ul class="nav navbar-nav navbar-left">
-            <li><a href="/metadata"><i class="fa fa-file-code-o"><span>IdP Metadata</span></i></a></li>
-          </ul>
-          <ul class="nav navbar-nav navbar-right">
-            <li><a href="/signout"><i class="fa fa-sign-out"><span>New Session</span></i></a></li>
-            <li class="active"><a href="/settings"><i class="fa fa-cog"><span>Settings</span></i></a></li>
-          </ul>
-        </div><!--/.nav-collapse -->
-    </nav>
-
-
-    <div class="container">
+    <div class="container sign-in">
       <div class="row">
         {{{body}}}
       </div>

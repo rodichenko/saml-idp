@@ -31,7 +31,8 @@ const IDP_PATHS = {
   METADATA: '/metadata',
   SIGN_IN: '/signin',
   SIGN_OUT: '/signout',
-  SETTINGS: '/settings'
+  SETTINGS: '/settings',
+  LOG_IN: '/login'
 }
 
 const cryptTypes           = {
@@ -109,27 +110,11 @@ function getHashCode(str) {
   return hash;
 }
 
-
-/**
- * Arguments
- */
-function processArgs(args, options) {
-  var baseArgv;
-  console.log();
-  console.log('loading configuration...');
-
-  if (options) {
-    baseArgv = yargs(args).config(options);
-  } else {
-    baseArgv = yargs(args).config('settings', function(settingsPathArg) {
-      const settingsPath = resolveFilePath(settingsPathArg);
-      return JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
-    });
-  }
-  return baseArgv
+function defaultCommand(a) {
+  return a
     .usage('\nSimple IdP for SAML 2.0 WebSSO & SLO Profile\n\n' +
-        'Launches an IdP web server that mints SAML assertions or logout responses for a Service Provider (SP)\n\n' +
-        'Usage:\n\t$0 -acs {url} -aud {uri}')
+      'Launches an IdP web server that mints SAML assertions or logout responses for a Service Provider (SP)\n\n' +
+      'Usage:\n\t$0 -acs {url} -aud {uri}')
     .options({
       port: {
         description: 'IdP Web Server Listener Port',
@@ -204,7 +189,7 @@ function processArgs(args, options) {
       },
       encryptionPublicKey: {
         description: 'SP RSA Public Key (pem) for Assertion Encryption ' +
-        '(e.g. openssl x509 -pubkey -noout -in sp-cert.pem)',
+          '(e.g. openssl x509 -pubkey -noout -in sp-cert.pem)',
         required: false,
         string: true,
         alias: 'encKey',
@@ -265,6 +250,20 @@ function processArgs(args, options) {
             return fs.readFileSync(filePath, 'utf8')
           }
         }
+      },
+      checkProfiles: {
+        description: 'Check profile existence in database',
+        required: false,
+        boolean: true,
+        default: false,
+        alias: 'check'
+      },
+      profileDatabase: {
+        description: 'Path to profile\'s database file (JSON)',
+        default: 'saml-idp-profiles.json',
+        required: false,
+        string: true,
+        alias: 'pd'
       }
     })
     .example('\t$0 --acs http://acme.okta.com/auth/saml20/exampleidp --aud https://www.okta.com/saml2/service-provider/spf5aFRRXFGIMAYXQPNV', '')
@@ -294,8 +293,202 @@ function processArgs(args, options) {
         return 'Encountered an exception while loading SAML attribute config file "' + configFilePath + '".\n' + error;
       }
       return true;
+    });
+}
+
+function loadConfiguration(args, options) {
+  var bArgv;
+  console.log();
+  console.log('loading configuration...');
+
+  if (options) {
+    bArgv = yargs(args).config(options);
+  } else {
+    bArgv = yargs(args).config('settings', function(settingsPathArg) {
+      const settingsPath = resolveFilePath(settingsPathArg);
+      return JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
+    });
+  }
+  return bArgv;
+}
+
+function addUserCommand(y) {
+  const configObj = require('./config.js');
+  const options = {
+    userName: {},
+    password: {}
+  };
+  (configObj.metadata || []).forEach(function (item) {
+    options[item.id] = {
+      required: !item.optional,
+      description: item.description,
+      string: true
+    };
+  });
+  options.userName.description = options.userName.description || '';
+  options.userName.required = true;
+  options.userName.string = true;
+  options.password.description = options.password.description || 'User\'s password';
+  options.password.required = true;
+  options.password.string = true;
+  options.password.coerce = getHashCode;
+  options.profileDatabase = {
+    description: 'Path to profile\'s database file (JSON)',
+    default: 'saml-idp-profiles.json',
+    required: false,
+    string: true,
+    alias: 'pd'
+  };
+  return y
+    .options(options)
+    .help();
+}
+
+function removeUserCommand(y) {
+  return y
+    .options({
+      userName: {
+        required: true,
+        string: true
+      },
+      profileDatabase: {
+        description: 'Path to profile\'s database file (JSON)',
+        default: 'saml-idp-profiles.json',
+        required: false,
+        string: true,
+        alias: 'pd'
+      }
     })
-    .wrap(baseArgv.terminalWidth());
+    .help();
+}
+
+function listUsersCommand(y) {
+  return y
+    .options({
+      profileDatabase: {
+        description: 'Path to profile\'s database file (JSON)',
+        default: 'saml-idp-profiles.json',
+        required: false,
+        string: true,
+        alias: 'pd'
+      }
+    })
+    .help();
+}
+
+function addUser(dbPath, userName, password, attributes) {
+  let db = {
+    users: []
+  };
+  if (fs.existsSync(dbPath)) {
+    db = JSON.parse(fs.readFileSync(dbPath, 'utf-8')) || {};
+  }
+  if (!db.users) {
+    db.users = [];
+  }
+  const [existedUser] = db.users.filter(u => {
+    return (u.userName || '').toLowerCase() === (userName || '').toLowerCase();
+  });
+  if (!existedUser) {
+    const user = {};
+    Object.keys((attributes || {})).forEach(function (key) {
+      user[key] = attributes[key];
+    });
+    user.userName = userName;
+    user.password = password;
+    db.users.push(user);
+    fs.writeFileSync(dbPath, JSON.stringify(db));
+    console.log('User added');
+  } else {
+    console.log('User already exists');
+  }
+}
+
+function removeUser(dbPath, userName) {
+  let db = {
+    users: []
+  };
+  if (fs.existsSync(dbPath)) {
+    db = JSON.parse(fs.readFileSync(dbPath, 'utf-8'));
+  }
+  if (!db.users) {
+    db.users = [];
+  }
+  const [existedUser] = db.users.filter(u => {
+    return (u.userName || '').toLowerCase() === (userName || '').toLowerCase();
+  });
+  if (existedUser) {
+    const index = db.users.indexOf(existedUser);
+    if (index >= 0) {
+      db.users.splice(index, 1);
+    }
+    fs.writeFileSync(dbPath, JSON.stringify(db));
+    console.log('User removed');
+  } else {
+    console.log('User not found');
+  }
+}
+
+function listUsers(dbPath) {
+  let db = {
+    users: []
+  };
+  if (fs.existsSync(dbPath)) {
+    db = JSON.parse(fs.readFileSync(dbPath, 'utf-8'));
+  }
+  console.log((db.users || []).length, 'users');
+  (db.users || []).forEach(user => {
+    const attrs = [];
+    Object.keys(user).forEach(key => {
+      if (key !== 'password') {
+        attrs.push(user[key]);
+      }
+    });
+    console.log(attrs.join(' '));
+  });
+}
+
+function getUser(dbPath, userName, password) {
+  let db = {
+    users: []
+  };
+  if (fs.existsSync(dbPath)) {
+    db = JSON.parse(fs.readFileSync(dbPath, 'utf-8'));
+  }
+  return (db.users || []).filter(u => {
+    return (u.userName || '').toLowerCase() === (userName || '').toLowerCase() &&
+      u.password.toString() === password.toString();
+  })[0];
+}
+
+/**
+ * Arguments
+ */
+function processArgs(args, options) {
+  var baseArgv = loadConfiguration(args, options);
+  return baseArgv
+    .command(['run', '$0'], 'Launches an IdP web server that mints SAML assertions or logout responses for a Service Provider (SP)', defaultCommand, (argv) => {
+      return _runServer(argv);
+    })
+    .command('add-user <userName> <password>', 'Add user to database', addUserCommand, (argv) => {
+      const attributes = {};
+      const configObj = require('./config.js');
+      (configObj.metadata || []).forEach(function (item) {
+        if (['userName', 'password'].indexOf(item.id) === -1) {
+          attributes[item.id] = argv[item.id];
+        }
+      });
+      addUser(argv.profileDatabase, argv.userName, argv.password, attributes);
+    })
+    .command('remove-user <userName>', 'Remove user form database', removeUserCommand, (argv) => {
+      removeUser(argv.profileDatabase, argv.userName);
+    })
+    .command('list-users', 'List users', listUsersCommand, (argv) => {
+      listUsers(argv.profileDatabase);
+    })
+    .help()
+    .wrap(baseArgv.terminalWidth())
+    .argv;
 }
 
 
@@ -397,6 +590,7 @@ function _runServer(argv) {
                               console.log(xmlFormat(response.toString(), {indentation: '  '}));
                               console.log();
                               res.render('samlresponse', {
+                                appearance: req.appearance,
                                 AcsUrl: opts.postUrl,
                                 SAMLResponse: response.toString('base64'),
                                 RelayState: opts.RelayState
@@ -475,14 +669,29 @@ function _runServer(argv) {
    */
 
   const showUser = function (req, res, next) {
-    res.render('user', {
-      user: req.user,
-      participant: req.participant,
-      metadata: req.metadata,
-      authnRequest: req.authnRequest,
-      idp: req.idp.options,
-      paths: IDP_PATHS
-    });
+    if (!req.user) {
+      const error = req.session.authError;
+      req.session.authError = null;
+      res.render('login', {
+        appearance: req.appearance,
+        user: req.user || {},
+        participant: req.participant,
+        metadata: req.metadata,
+        idp: req.idp.options,
+        paths: IDP_PATHS,
+        error: error
+      });
+    } else {
+      res.render('user', {
+        appearance: req.appearance,
+        user: req.user,
+        participant: req.participant,
+        metadata: req.metadata,
+        authnRequest: req.authnRequest,
+        idp: req.idp.options,
+        paths: IDP_PATHS
+      });
+    }
   }
 
   /**
@@ -493,10 +702,11 @@ function _runServer(argv) {
     samlp.parseRequest(req, function(err, data) {
       if (err) {
         return res.render('error', {
+          appearance: req.appearance,
           message: 'SAML AuthnRequest Parse Error: ' + err.message,
           error: err
         });
-      };
+      }
       if (data) {
         req.authnRequest = {
           relayState: req.query.RelayState || req.body.RelayState,
@@ -531,6 +741,7 @@ function _runServer(argv) {
   const parseLogoutRequest = function(req, res, next) {
     if (!req.idp.options.sloUrl) {
       return res.render('error', {
+        appearance: req.appearance,
         message: 'SAML Single Logout Service URL not defined for Service Provider'
       });
     };
@@ -570,10 +781,15 @@ function _runServer(argv) {
   });
 
   app.use(function(req, res, next){
-    req.user = argv.config.user;
+    if (!argv.checkProfiles) {
+      req.user = argv.config.user;
+    }
+    req.appearance = argv.config.appearance;
     req.metadata = argv.config.metadata;
     req.idp = { options: idpOptions };
-    req.participant = getParticipant(req);
+    if (!argv.checkProfiles) {
+      req.participant = getParticipant(req);
+    }
     next();
   });
 
@@ -582,6 +798,44 @@ function _runServer(argv) {
 
   app.get(IDP_PATHS.SLO, parseLogoutRequest);
   app.post(IDP_PATHS.SLO, parseLogoutRequest);
+
+  if (argv.checkProfiles) {
+    app.post([IDP_PATHS.LOG_IN], function(req, res, next) {
+      listUsers(argv.profileDatabase);
+      const user = getUser(argv.profileDatabase, req.body.userName, getHashCode(req.body.password));
+      if (user) {
+        console.log('User found');
+        req.session.authError = null;
+        (argv.config.metadata || []).forEach(metadataItem => {
+          if (!user.hasOwnProperty(metadataItem.id)) {
+            user[metadataItem.id] = '';
+          }
+        });
+        req.user = user;
+        req.participant = getParticipant(req);
+        const authOptions = extend({}, req.idp.options);
+        if (!authOptions.encryptAssertion) {
+          delete authOptions.encryptionCert;
+          delete authOptions.encryptionPublicKey;
+        }
+        // Set Session Index
+        authOptions.sessionIndex = getSessionIndex(req);
+
+        // Keep calm and Single Sign On
+        console.log('Sending SAML Response\nUser => \n%s\nOptions => \n',
+          JSON.stringify(req.user, null, 2), authOptions);
+        samlp.auth(authOptions)(req, res, next);
+      } else {
+        console.log('User not found');
+        req.user = {
+          email: req.body.email,
+          error: 'Wrong e-mail or password'
+        };
+        req.session.authError = 'Incorrect UserName or password';
+        res.redirect('/');
+      }
+    });
+  }
 
   app.post(IDP_PATHS.SIGN_IN, function(req, res) {
     const authOptions = extend({}, req.idp.options);
@@ -669,6 +923,7 @@ function _runServer(argv) {
 
   app.get([IDP_PATHS.SETTINGS], function(req, res, next) {
     res.render('settings', {
+      appearance: req.appearance,
       idp: req.idp.options
     });
   });
@@ -708,6 +963,7 @@ function _runServer(argv) {
     if (err) {
       res.status(err.status || 500);
       res.render('error', {
+          appearance: req.appearance,
           message: err.message,
           error: err
       });
@@ -755,13 +1011,12 @@ function _runServer(argv) {
 }
 
 function runServer(options) {
-  const args = processArgs([], options);
+  const args = defaultCommand(loadConfiguration([], options));
   return _runServer(args.argv);
 }
 
 function main () {
-  const args = processArgs(process.argv.slice(2));
-  _runServer(args.argv);
+  processArgs(process.argv.slice(2));
 }
 
 module.exports = {

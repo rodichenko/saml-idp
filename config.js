@@ -60,7 +60,16 @@ var metadata = [{
   options: ['Admin', 'Editor', 'Commenter']
 }];
 
+/**
+ * HTML settings
+ */
+var appearance = {
+  title: 'Cloud Pipeline Sign In',
+  icon: 'favicon.png'
+};
+
 module.exports = {
+  appearance: appearance,
   user: profile,
   metadata: metadata
 }

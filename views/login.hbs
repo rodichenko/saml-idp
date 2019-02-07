@@ -1,0 +1,41 @@
+<div class="col-md-8 col-md-offset-2">
+    <div class="panel panel-primary">
+        <div class="panel-heading">
+            <h3 class="panel-title">
+                {{#if appearance.icon}}
+                    <img src="{{appearance.icon}}" /> {{#if appearance.title}}{{appearance.title}}{{else}}Log in{{/if}}
+                {{else}}
+                    <i class="fa fa-user-o"><span>Log in</span></i>
+                {{/if}}
+            </h3>
+        </div>
+        <div class="panel-body">
+            <form action="{{paths.LOG_IN}}" class="form-horizontal form-profile" method="post" role="form">
+                <div class='form-profile-attributes'>
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label" for="email">UserName</label>
+                        <div class="col-sm-9">
+                            <input class="form-control" id="userName" name="userName" required="" value="{{user.userName}}">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label" for="password">Password</label>
+                        <div class="col-sm-9">
+                            <input class="form-control" id="password" name="password" required="" type="password">
+                        </div>
+                    </div>
+                </div>
+                {{#if error}}
+                    <div class="log-in-error">
+                        {{error}}
+                    </div>
+                {{/if}}
+                <div class="form-group">
+                    <div class="col-md-12 text-right">
+                        <button id="btn-sign-in" class="btn btn-primary input-xlarge" type="submit"><i class="fa fa-sign-in"><span>Log in</span></i></button>
+                    </div>
+                </div>
+            </form>
+        </div><!-- /.form-profile-attributes -->
+    </div>
+</div>
