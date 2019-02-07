@@ -64,7 +64,7 @@ var metadata = [{
  * HTML settings
  */
 var appearance = {
-  title: 'Cloud Pipeline Sign In',
+  title: 'Sign In',
   icon: 'favicon.png'
 };
 
