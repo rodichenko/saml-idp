@@ -64,8 +64,7 @@ var metadata = [{
  * HTML settings
  */
 var appearance = {
-  title: 'Sign In',
-  icon: 'favicon.png'
+  title: 'Sign In'
 };
 
 module.exports = {
