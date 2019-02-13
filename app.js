@@ -386,7 +386,28 @@ function addConnectionCommand(y) {
     certificate: {
       required: false,
       string: true,
-      alias: 'c'
+      alias: 'c',
+      coerce: function certFileCoercer(value) {
+        if (matchesCertType(value, 'certificate')) {
+          return value;
+        }
+        if (matchesCertType(value, 'public key')) {
+          return value;
+        }
+        const filePath = resolveFilePath(value);
+        if (filePath) {
+          const content = fs.readFileSync(filePath, 'utf8');
+          if (matchesCertType(content, 'certificate')) {
+            return content;
+          }
+          if (matchesCertType(content, 'public key')) {
+            return content;
+          }
+        }
+        throw new Error(
+          'Invalid ' + value + ', not a valid crypt cert/key or file path'
+        )
+      }
     },
     profileDatabase: {
       description: 'Path to profile\'s database file (JSON)',
@@ -587,10 +608,15 @@ function listConnections(dbPath) {
     db = JSON.parse(fs.readFileSync(dbPath, 'utf-8'));
   }
   console.log((db.connections || []).length, 'connections');
-  (db.connections || []).forEach(user => {
+  (db.connections || []).forEach(connection => {
     const attrs = [];
-    Object.keys(user).forEach(key => {
-      attrs.push(user[key]);
+    Object.keys(connection).forEach(key => {
+      if (key === 'certificate' && connection[key] && connection[key].data) {
+        const cert = connection[key].data;
+        attrs.push(`certificate: ${cert.length} bytes`)
+      } else {
+        attrs.push(connection[key]);
+      }
     });
     console.log(attrs.join(' '));
   });
@@ -877,17 +903,31 @@ function _runServer(argv) {
           forceAuthn: data.forceAuthn === 'true'
         };
         console.log('Received AuthnRequest => \n', req.authnRequest);
-        console.log('Check issuer:', data.issuer);
-        const connection = getConnection(argv.profileDatabase, data.issuer);
-        if (connection && connection.certificate) {
-          //todo: check certificate
-        } else if (!connection) {
-          return res.render('error', {
-            appearance: req.appearance,
-            error: {
-              status: `Unknown issuer '${data.issuer}'`
-            }
-          });
+        if (argv.checkProfiles) {
+          console.log('Check issuer:', data.issuer);
+          const connection = getConnection(argv.profileDatabase, data.issuer);
+          if (connection && connection.certificate) {
+            samlp.parseRequest(req, {signingCert: connection.certificate}, (err, data) => {
+              if (err) {
+                return res.render('error', {
+                  appearance: req.appearance,
+                  message: 'SAML AuthnRequest Parse Error: ' + err.message,
+                  error: err
+                });
+              } else {
+                // validation passed
+                return showUser(req, res, next);
+              }
+            });
+            return null;
+          } else if (!connection) {
+            return res.render('error', {
+              appearance: req.appearance,
+              error: {
+                status: `Unknown issuer '${data.issuer}'`
+              }
+            });
+          }
         }
       }
       return showUser(req, res, next);
