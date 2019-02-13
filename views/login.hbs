@@ -30,6 +30,7 @@
                         {{error}}
                     </div>
                 {{/if}}
+                {{#if authnRequest.id}} <input name="_authnRequest" type="hidden" value='{{serialize authnRequest}}'> {{/if}}
                 <div class="form-group">
                     <div class="col-md-12 text-right">
                         <button id="btn-sign-in" class="btn btn-primary input-xlarge" type="submit"><i class="fa fa-sign-in"><span>Log in</span></i></button>

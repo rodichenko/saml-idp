@@ -114,7 +114,7 @@ function defaultCommand(a) {
   return a
     .usage('\nSimple IdP for SAML 2.0 WebSSO & SLO Profile\n\n' +
       'Launches an IdP web server that mints SAML assertions or logout responses for a Service Provider (SP)\n\n' +
-      'Usage:\n\t$0 -acs {url} -aud {uri}')
+      'Usage:\n\t$0 run')
     .options({
       port: {
         description: 'IdP Web Server Listener Port',
@@ -142,7 +142,7 @@ function defaultCommand(a) {
       },
       acsUrl: {
         description: 'SP Assertion Consumer URL',
-        required: true,
+        required: false,
         alias: 'acs'
       },
       sloUrl: {
@@ -152,7 +152,7 @@ function defaultCommand(a) {
       },
       audience: {
         description: 'SP Audience URI',
-        required: true,
+        required: false,
         alias: 'aud'
       },
       serviceProviderId: {
@@ -376,6 +376,64 @@ function listUsersCommand(y) {
     .help();
 }
 
+function addConnectionCommand(y) {
+  const options = {
+    issuer: {
+      required: true,
+      string: true,
+      alias: 'i'
+    },
+    certificate: {
+      required: false,
+      string: true,
+      alias: 'c'
+    },
+    profileDatabase: {
+      description: 'Path to profile\'s database file (JSON)',
+      default: 'saml-idp-profiles.json',
+      required: false,
+      string: true,
+      alias: 'pd'
+    }
+  };
+  return y
+    .options(options)
+    .help();
+}
+
+function removeConnectionCommand(y) {
+  return y
+    .options({
+      issuer: {
+        required: true,
+        string: true,
+        alias: 'i'
+      },
+      profileDatabase: {
+        description: 'Path to profile\'s database file (JSON)',
+        default: 'saml-idp-profiles.json',
+        required: false,
+        string: true,
+        alias: 'pd'
+      }
+    })
+    .help();
+}
+
+function listConnectionsCommand(y) {
+  return y
+    .options({
+      profileDatabase: {
+        description: 'Path to profile\'s database file (JSON)',
+        default: 'saml-idp-profiles.json',
+        required: false,
+        string: true,
+        alias: 'pd'
+      }
+    })
+    .help();
+}
+
 function addUser(dbPath, userName, password, attributes) {
   let db = {
     users: []
@@ -461,6 +519,96 @@ function getUser(dbPath, userName, password) {
   })[0];
 }
 
+function getIssuerWithoutLastSlash(i) {
+  if (i[i.length - 1] === '/') {
+    return i.substr(0, i.length - 1).toLowerCase();
+  }
+  return i.toLowerCase();
+}
+
+function addConnection(dbPath, issuer, certificate) {
+  let db = {
+    users: []
+  };
+  if (fs.existsSync(dbPath)) {
+    db = JSON.parse(fs.readFileSync(dbPath, 'utf-8')) || {};
+  }
+  if (!db.connections) {
+    db.connections = [];
+  }
+  const i = getIssuerWithoutLastSlash(issuer);
+  const [existedConnection] = db.connections.filter(c => {
+    return getIssuerWithoutLastSlash(c.issuer) === i;
+  });
+  if (!existedConnection) {
+    const connection = {
+      issuer,
+      certificate
+    };
+    db.connections.push(connection);
+    fs.writeFileSync(dbPath, JSON.stringify(db));
+    console.log('Connection added');
+  } else {
+    console.log('Connection already exists');
+  }
+}
+
+function removeConnection(dbPath, issuer) {
+  let db = {
+    connections: []
+  };
+  if (fs.existsSync(dbPath)) {
+    db = JSON.parse(fs.readFileSync(dbPath, 'utf-8'));
+  }
+  if (!db.connections) {
+    db.connections = [];
+  }
+  const i = getIssuerWithoutLastSlash(issuer);
+  const [existedConnection] = db.connections.filter(c => {
+    return getIssuerWithoutLastSlash(c.issuer) === i;
+  });
+  if (existedConnection) {
+    const index = db.connections.indexOf(existedConnection);
+    if (index >= 0) {
+      db.connections.splice(index, 1);
+    }
+    fs.writeFileSync(dbPath, JSON.stringify(db));
+    console.log('Connection removed');
+  } else {
+    console.log('Connection not found');
+  }
+}
+
+function listConnections(dbPath) {
+  let db = {
+    connections: []
+  };
+  if (fs.existsSync(dbPath)) {
+    db = JSON.parse(fs.readFileSync(dbPath, 'utf-8'));
+  }
+  console.log((db.connections || []).length, 'connections');
+  (db.connections || []).forEach(user => {
+    const attrs = [];
+    Object.keys(user).forEach(key => {
+      attrs.push(user[key]);
+    });
+    console.log(attrs.join(' '));
+  });
+}
+
+function getConnection(dbPath, issuer) {
+  let db = {
+    connections: []
+  };
+  if (fs.existsSync(dbPath)) {
+    db = JSON.parse(fs.readFileSync(dbPath, 'utf-8'));
+  }
+  const i = getIssuerWithoutLastSlash(issuer);
+  return (db.connections || []).filter(c => {
+    return getIssuerWithoutLastSlash(c.issuer) === i;
+  })[0];
+}
+
 /**
  * Arguments
  */
@@ -485,6 +633,15 @@ function processArgs(args, options) {
     })
     .command('list-users', 'List users', listUsersCommand, (argv) => {
       listUsers(argv.profileDatabase);
+    })
+    .command('add-connection <issuer>', 'Add connection to database', addConnectionCommand, (argv) => {
+      addConnection(argv.profileDatabase, argv.issuer, argv.certificate);
+    })
+    .command('remove-connection <issuer>', 'Remove connection form database', removeConnectionCommand, (argv) => {
+      removeConnection(argv.profileDatabase, argv.issuer);
+    })
+    .command('list-connections', 'List connections', listConnectionsCommand, (argv) => {
+      listConnections(argv.profileDatabase);
     })
     .help()
     .wrap(baseArgv.terminalWidth())
@@ -671,7 +828,9 @@ function _runServer(argv) {
   const showUser = function (req, res, next) {
     if (!req.user) {
       const error = req.session.authError;
+      const authnRequest = req.session.authnRequest;
       req.session.authError = null;
+      req.session.authnRequest = null;
       res.render('login', {
         appearance: req.appearance,
         user: req.user || {},
@@ -679,6 +838,7 @@ function _runServer(argv) {
         metadata: req.metadata,
         idp: req.idp.options,
         paths: IDP_PATHS,
+        authnRequest: req.authnRequest || authnRequest,
         error: error
       });
     } else {
@@ -717,6 +877,18 @@ function _runServer(argv) {
           forceAuthn: data.forceAuthn === 'true'
         };
         console.log('Received AuthnRequest => \n', req.authnRequest);
+        console.log('Check issuer:', data.issuer);
+        const connection = getConnection(argv.profileDatabase, data.issuer);
+        if (connection && connection.certificate) {
+          //todo: check certificate
+        } else if (!connection) {
+          return res.render('error', {
+            appearance: req.appearance,
+            error: {
+              status: `Unknown issuer '${data.issuer}'`
+            }
+          });
+        }
       }
       return showUser(req, res, next);
     })
@@ -814,6 +986,21 @@ function _runServer(argv) {
         req.user = user;
         req.participant = getParticipant(req);
         const authOptions = extend({}, req.idp.options);
+        if (req.body.hasOwnProperty('_authnRequest')) {
+          const buffer = new Buffer(req.body['_authnRequest'], 'base64');
+          req.authnRequest = JSON.parse(buffer.toString('utf8'));
+          // Apply AuthnRequest Params
+          authOptions.inResponseTo = req.authnRequest.id;
+          if (req.authnRequest.acsUrl) {
+            authOptions.acsUrl = req.authnRequest.acsUrl;
+            authOptions.recipient = req.authnRequest.acsUrl;
+            authOptions.destination = req.authnRequest.acsUrl;
+            authOptions.forceAuthn = req.authnRequest.forceAuthn;
+          }
+          if (req.authnRequest.relayState) {
+            authOptions.RelayState = req.authnRequest.relayState;
+          }
+        }
         if (!authOptions.encryptAssertion) {
           delete authOptions.encryptionCert;
           delete authOptions.encryptionPublicKey;
@@ -832,6 +1019,10 @@ function _runServer(argv) {
           error: 'Wrong e-mail or password'
         };
         req.session.authError = 'Incorrect UserName or password';
+        if (req.body.hasOwnProperty('_authnRequest')) {
+          const buffer = new Buffer(req.body['_authnRequest'], 'base64');
+          req.session.authnRequest = JSON.parse(buffer.toString('utf8'));
+        }
         res.redirect('/');
       }
     });

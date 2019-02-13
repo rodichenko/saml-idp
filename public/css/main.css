@@ -153,3 +153,10 @@ body {
   justify-content: space-around;
   color: red;
 }
+
+.error-container {
+  padding: 20px;
+  background-color: #fbf2f2;
+  border-radius: 5px;
+  border-color: #fbb6b4;
+}
