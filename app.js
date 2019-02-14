@@ -298,9 +298,6 @@ function defaultCommand(a) {
 
 function loadConfiguration(args, options) {
   var bArgv;
-  console.log();
-  console.log('loading configuration...');
-
   if (options) {
     bArgv = yargs(args).config(options);
   } else {
@@ -607,18 +604,14 @@ function listConnections(dbPath) {
   if (fs.existsSync(dbPath)) {
     db = JSON.parse(fs.readFileSync(dbPath, 'utf-8'));
   }
-  console.log((db.connections || []).length, 'connections');
+  console.log(`${(db.connections || []).length} connections`);
   (db.connections || []).forEach(connection => {
-    const attrs = [];
-    Object.keys(connection).forEach(key => {
-      if (key === 'certificate' && connection[key] && connection[key].data) {
-        const cert = connection[key].data;
-        attrs.push(`certificate: ${cert.length} bytes`)
-      } else {
-        attrs.push(connection[key]);
-      }
-    });
-    console.log(attrs.join(' '));
+    console.log(`Issuer:\t${connection.issuer}`);
+    if (connection.certificate) {
+      console.log('Certificate:');
+      console.log(connection.certificate);
+    }
+    console.log();
   });
 }
 
@@ -884,54 +877,51 @@ function _runServer(argv) {
    * Shared Handlers
    */
 
+  const getCredentialsForSAMLRequest = (issuer, sessionIndex, nameId, callback) => {
+    if (argv.checkProfiles && issuer) {
+      console.log('Check issuer:', issuer);
+      const connection = getConnection(argv.profileDatabase, issuer);
+      if (connection && connection.certificate) {
+        console.log('Connection found. Certificate:');
+        console.log(connection.certificate);
+        console.log();
+        callback(null, {cert: connection.certificate});
+      } else if (connection) {
+        callback(null, null);
+      } else {
+        callback(new Error(`Unknown issuer: ${issuer}`), null);
+      }
+      return;
+    }
+    callback(null, null);
+  };
+
   const parseSamlRequest = function(req, res, next) {
-    samlp.parseRequest(req, function(err, data) {
-      if (err) {
-        return res.render('error', {
-          appearance: req.appearance,
-          message: 'SAML AuthnRequest Parse Error: ' + err.message,
-          error: err
-        });
-      }
-      if (data) {
-        req.authnRequest = {
-          relayState: req.query.RelayState || req.body.RelayState,
-          id: data.id,
-          issuer: data.issuer,
-          destination: data.destination,
-          acsUrl: data.assertionConsumerServiceURL,
-          forceAuthn: data.forceAuthn === 'true'
-        };
-        console.log('Received AuthnRequest => \n', req.authnRequest);
-        if (argv.checkProfiles) {
-          console.log('Check issuer:', data.issuer);
-          const connection = getConnection(argv.profileDatabase, data.issuer);
-          if (connection && connection.certificate) {
-            samlp.parseRequest(req, {signingCert: connection.certificate}, (err, data) => {
-              if (err) {
-                return res.render('error', {
-                  appearance: req.appearance,
-                  message: 'SAML AuthnRequest Parse Error: ' + err.message,
-                  error: err
-                });
-              } else {
-                // validation passed
-                return showUser(req, res, next);
-              }
-            });
-            return null;
-          } else if (!connection) {
-            return res.render('error', {
-              appearance: req.appearance,
-              error: {
-                status: `Unknown issuer '${data.issuer}'`
-              }
-            });
-          }
+    console.log();
+    samlp.parseRequest(
+      req,
+      {getCredentials: getCredentialsForSAMLRequest},
+      function(err, data) {
+        if (err) {
+          return res.render('error', {
+            appearance: req.appearance,
+            message: 'SAML AuthnRequest Parse Error: ' + err.message,
+            error: err
+          });
         }
-      }
-      return showUser(req, res, next);
-    })
+        if (data) {
+          req.authnRequest = {
+            relayState: req.query.RelayState || req.body.RelayState,
+            id: data.id,
+            issuer: data.issuer,
+            destination: data.destination,
+            acsUrl: data.assertionConsumerServiceURL,
+            forceAuthn: data.forceAuthn === 'true'
+          };
+          console.log('Received AuthnRequest => \n', req.authnRequest);
+        }
+        return showUser(req, res, next);
+      })
   };
 
   const getSessionIndex = function(req) {
