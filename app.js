@@ -1025,6 +1025,7 @@ function _runServer(argv) {
             authOptions.acsUrl = req.authnRequest.acsUrl;
             authOptions.recipient = req.authnRequest.acsUrl;
             authOptions.destination = req.authnRequest.acsUrl;
+            authOptions.audience = req.authnRequest.issuer;
             authOptions.forceAuthn = req.authnRequest.forceAuthn;
           }
           if (req.authnRequest.relayState) {
