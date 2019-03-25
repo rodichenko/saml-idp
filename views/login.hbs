@@ -13,7 +13,7 @@
             <form action="{{paths.LOG_IN}}" class="form-horizontal form-profile" method="post" role="form">
                 <div class='form-profile-attributes'>
                     <div class="form-group">
-                        <label class="col-sm-3 control-label" for="email">UserName</label>
+                        <label class="col-sm-3 control-label" for="email">User name</label>
                         <div class="col-sm-9">
                             <input class="form-control" id="userName" name="userName" required="" value="{{user.userName}}">
                         </div>
@@ -30,6 +30,7 @@
                         {{error}}
                     </div>
                 {{/if}}
+                {{#if source}} <input name="source" type="hidden" value='{{source}}'> {{/if}}
                 {{#if authnRequest.id}} <input name="_authnRequest" type="hidden" value='{{serialize authnRequest}}'> {{/if}}
                 <div class="form-group">
                     <div class="col-md-12 text-right">

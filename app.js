@@ -32,7 +32,8 @@ const IDP_PATHS = {
   SIGN_IN: '/signin',
   SIGN_OUT: '/signout',
   SETTINGS: '/settings',
-  LOG_IN: '/login'
+  LOG_IN: '/login',
+  ADMIN: '/admin'
 }
 
 const cryptTypes           = {
@@ -475,8 +476,40 @@ function addUser(dbPath, userName, password, attributes) {
     db.users.push(user);
     fs.writeFileSync(dbPath, JSON.stringify(db));
     console.log('User added');
+    return 0;
   } else {
     console.log('User already exists');
+    return 1;
+  }
+}
+
+function editUser(dbPath, userName, password, attributes) {
+  let db = {
+    users: []
+  };
+  if (fs.existsSync(dbPath)) {
+    db = JSON.parse(fs.readFileSync(dbPath, 'utf-8')) || {};
+  }
+  if (!db.users) {
+    db.users = [];
+  }
+  const [existedUser] = db.users.filter(u => {
+    return (u.userName || '').toLowerCase() === (userName || '').toLowerCase();
+  });
+  if (existedUser) {
+    const index = db.users.indexOf(existedUser);
+    Object.keys((attributes || {})).forEach(function (key) {
+      existedUser[key] = attributes[key];
+    });
+    existedUser.userName = userName;
+    existedUser.password = password || existedUser.password;
+    db.users.splice(index, 1, existedUser);
+    fs.writeFileSync(dbPath, JSON.stringify(db));
+    console.log('User modified');
+    return 0;
+  } else {
+    console.log('Unknown user');
+    return 1;
   }
 }
 
@@ -500,8 +533,10 @@ function removeUser(dbPath, userName) {
     }
     fs.writeFileSync(dbPath, JSON.stringify(db));
     console.log('User removed');
+    return 0;
   } else {
     console.log('User not found');
+    return 1;
   }
 }
 
@@ -535,6 +570,28 @@ function getUser(dbPath, userName, password) {
     return (u.userName || '').toLowerCase() === (userName || '').toLowerCase() &&
       u.password.toString() === password.toString();
   })[0];
+}
+
+function findUser(dbPath, userName) {
+  let db = {
+    users: []
+  };
+  if (fs.existsSync(dbPath)) {
+    db = JSON.parse(fs.readFileSync(dbPath, 'utf-8'));
+  }
+  return (db.users || []).filter(u => {
+    return (u.userName || '').toLowerCase() === (userName || '').toLowerCase()
+  })[0];
+}
+
+function getUsers(dbPath) {
+  let db = {
+    users: []
+  };
+  if (fs.existsSync(dbPath)) {
+    db = JSON.parse(fs.readFileSync(dbPath, 'utf-8'));
+  }
+  return (db.users || []);
 }
 
 function getIssuerWithoutLastSlash(i) {
@@ -820,6 +877,10 @@ function _runServer(argv) {
     return new Buffer(JSON.stringify(context)).toString('base64');
   });
 
+  hbs.registerHelper('arrayLength', function(array, plus) {
+    return array.length + plus;
+  });
+
   /**
    * Middleware
    */
@@ -846,7 +907,7 @@ function _runServer(argv) {
 
   const showUser = function (req, res, next) {
     if (!req.user) {
-      const error = req.session.authError;
+      const error = req.session.authError || req.query.error;
       const authnRequest = req.session.authnRequest;
       req.session.authError = null;
       req.session.authnRequest = null;
@@ -858,7 +919,8 @@ function _runServer(argv) {
         idp: req.idp.options,
         paths: IDP_PATHS,
         authnRequest: req.authnRequest || authnRequest,
-        error: error
+        error: error,
+        source: req.query.source
       });
     } else {
       res.render('user', {
@@ -1003,7 +1065,6 @@ function _runServer(argv) {
 
   if (argv.checkProfiles) {
     app.post([IDP_PATHS.LOG_IN], function(req, res, next) {
-      listUsers(argv.profileDatabase);
       const user = getUser(argv.profileDatabase, req.body.userName, getHashCode(req.body.password));
       if (user) {
         console.log('User found');
@@ -1032,6 +1093,11 @@ function _runServer(argv) {
             authOptions.RelayState = req.authnRequest.relayState;
           }
         }
+        req.session.currentUser = user.userName;
+        if (req.body.source === 'administration') {
+          res.redirect(IDP_PATHS.ADMIN);
+          return;
+        }
         if (!authOptions.encryptAssertion) {
           delete authOptions.encryptionCert;
           delete authOptions.encryptionPublicKey;
@@ -1049,7 +1115,7 @@ function _runServer(argv) {
           email: req.body.email,
           error: 'Wrong e-mail or password'
         };
-        req.session.authError = 'Incorrect UserName or password';
+        req.session.authError = 'Incorrect user name or password';
         if (req.body.hasOwnProperty('_authnRequest')) {
           const buffer = new Buffer(req.body['_authnRequest'], 'base64');
           req.session.authnRequest = JSON.parse(buffer.toString('utf8'));
@@ -1095,7 +1161,7 @@ function _runServer(argv) {
     console.log('Sending SAML Response\nUser => \n%s\nOptions => \n',
       JSON.stringify(req.user, null, 2), authOptions);
     samlp.auth(authOptions)(req, res);
-  })
+  });
 
   app.get(IDP_PATHS.METADATA, function(req, res, next) {
     samlp.metadata(req.idp.options)(req, res);
@@ -1140,6 +1206,107 @@ function _runServer(argv) {
         }
         res.redirect('back');
       })
+    }
+  });
+
+  app.get([IDP_PATHS.ADMIN], function (req, res, next) {
+    const user = findUser(argv.profileDatabase, req.session.currentUser);
+    if (!user) {
+      res.redirect('/?source=administration');
+      return;
+    } else if ((user.groups || '').split(',').map(g => g.trim().toLowerCase()).indexOf('admins') === -1) {
+      res.redirect('/?source=administration&error=' + encodeURIComponent('You have no permissions to manage users'));
+      return;
+    }
+    res.render('administration/users', {
+      paths: IDP_PATHS,
+      appearance: req.appearance,
+      idp: req.idp.options,
+      layout: 'administration/layout',
+      users: getUsers(argv.profileDatabase),
+      metadata: req.metadata
+    });
+  });
+
+  app.post([IDP_PATHS.ADMIN], function (req, res, next) {
+    const user = findUser(argv.profileDatabase, req.session.currentUser);
+    if (!user) {
+      res.status(440).send('Session expired');
+      return;
+    } else if ((user.groups || '').split(',').map(g => g.trim().toLowerCase()).indexOf('admins') === -1) {
+      res.status(440).send('You have no permissions to manage users');
+      return;
+    }
+    if (req.body && req.body.userName) {
+      try {
+        if ((req.body.isNew || !!req.body.password || !!req.body.confirmPassword) &&
+          req.body.password !== req.body.confirmPassword) {
+          res.status(500).send('Passwords are different! Please, confirm password');
+          return;
+        }
+        const user = findUser(argv.profileDatabase, req.body.userName);
+        if (user && req.body.isNew) {
+          res.status(500).send('User with user name "' + req.body.userName + '" already exists.');
+          return;
+        }
+        const attributes = req.body;
+        const userName = req.body.userName;
+        const password = req.body.password;
+        const isNew = req.body.isNew;
+        delete attributes.userName;
+        delete attributes.password;
+        delete attributes.confirmPassword;
+        delete attributes.isNew;
+        let result = 0;
+        if (isNew) {
+          result = addUser(argv.profileDatabase, userName, getHashCode(password), attributes);
+        } else {
+          console.log(password, getHashCode(password));
+          result = editUser(argv.profileDatabase, userName, password ? getHashCode(password) : undefined, attributes);
+        }
+        if (result === 0) {
+          res.sendStatus(200).end();
+        } else if (result === 1) {
+          if (isNew) {
+            res.status(500).send('User with user name "' + req.body.userName + '" already exists.');
+          } else {
+            res.status(500).send('User with user name "' + req.body.userName + '" not found.');
+          }
+        } else {
+          if (isNew) {
+            res.status(500).send('Error creating user');
+          } else {
+            res.status(500).send('Error modifying user');
+          }
+        }
+      } catch (error) {
+        res.status(500).send(error.message);
+      }
+    }
+  });
+
+  app.delete([IDP_PATHS.ADMIN], function (req, res, next) {
+    const user = findUser(argv.profileDatabase, req.session.currentUser);
+    if (!user) {
+      res.status(440).send('Session expired');
+      return;
+    } else if ((user.groups || '').split(',').map(g => g.trim().toLowerCase()).indexOf('admins') === -1) {
+      res.status(440).send('You have no permissions to manage users');
+      return;
+    }
+    if (req.body && req.body.userName) {
+      try {
+        const result = removeUser(argv.profileDatabase, req.body.userName);;
+        if (result === 0) {
+          res.sendStatus(200).end();
+        } else if (result === 1) {
+          res.status(500).send('User with user name "' + req.body.userName + '" not found.');
+        } else {
+          res.status(500).send('Error removing user');
+        }
+      } catch (error) {
+        res.status(500).send(error.message);
+      }
     }
   });
 

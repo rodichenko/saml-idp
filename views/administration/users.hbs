@@ -1,0 +1,266 @@
+<table class="users-table" id="users-table">
+    <tr>
+        <th>User name</th>
+        {{#each metadata}}
+            <th>{{this.displayName}}</th>
+        {{/each}}
+        <th class="text-right">
+            <button id="btn-add-user" class="btn btn-primary" style="cursor: pointer">
+                <i class="fa fa-plus"><span>Add user</span></i>
+            </button>
+            <button id="btn-sign-out" class="btn btn-primary" style="cursor: pointer">
+                <i class="fa fa-sign-out"><span>Sign out</span></i>
+            </button>
+        </th>
+    </tr>
+    {{#each users}}
+        <tr data-username="{{this.userName}}">
+            <td data-field="userName" data-value="{{this.userName}}">{{this.userName}}</td>
+            {{#each ../metadata}}
+                <td data-field="{{this.id}}" data-value="{{getProperty this.id ..}}">{{getProperty this.id
+                                                                                                   ..}}</td>
+            {{/each}}
+            <td class="text-right" style="padding-right: 20px">
+                <a class="edit-user"
+                   style="cursor: pointer"
+                   data-username="{{this.userName}}">
+                    Edit
+                </a>
+                <a class="remove-user"
+                   style="cursor: pointer; color: red; margin-left: 5px"
+                   data-username="{{this.userName}}">
+                    Remove
+                </a>
+            </td>
+        </tr>
+    {{/each}}
+</table>
+<div class="modal fade" id="modal-add-user">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button aria-label="Close" class="close" data-dismiss="modal" type="button"><span aria-hidden="true">&times;</span>
+                </button>
+                <h4 class="modal-title">Add user</h4>
+            </div>
+            <div class="modal-body">
+                <form class="form-horizontal" role="form">
+                    <input class="form-control" name="isNew" required="" type="hidden" value="true">
+                    <div class="form-group">
+                        <label class="col-md-3 control-label" for="userName">User Name</label>
+                        <div class="col-sm-9">
+                            <input class="form-control" name="userName" required="" type="text">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-md-3 control-label" for="password">Password</label>
+                        <div class="col-sm-9">
+                            <input class="form-control" name="password" required="" type="password">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-md-3 control-label" for="confirmPassword">Confirm password</label>
+                        <div class="col-sm-9">
+                            <input class="form-control" name="confirmPassword" required="" type="password">
+                        </div>
+                    </div>
+                    {{#each metadata}}
+                        <div class="form-group">
+                            <label class="col-md-3 control-label" for="{{this.id}}">{{this.displayName}}</label>
+                            <div class="col-sm-9">
+                                {{#if this.optional}}
+                                    <input class="form-control" name="{{this.id}}" type="text">
+                                {{else}}
+                                    <input class="form-control" name="{{this.id}}" required="" type="text">
+                                {{/if}}
+                            </div>
+                        </div>
+                    {{/each}}
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-default" data-dismiss="modal" type="button">Close</button>
+                <button class="btn btn-primary" type="button">Add user</button>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+<div class="modal fade" id="modal-edit-user">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button aria-label="Close" class="close" data-dismiss="modal" type="button"><span aria-hidden="true">&times;</span>
+                </button>
+                <h4 class="modal-title">Edit user</h4>
+            </div>
+            <div class="modal-body">
+                <form class="form-horizontal" role="form">
+                    <div class="form-group">
+                        <label class="col-md-3 control-label" for="userName">User Name</label>
+                        <div class="col-sm-9">
+                            <input class="form-control" name="userName" required="" type="text" readonly="">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-md-3 control-label" for="password">Password</label>
+                        <div class="col-sm-9">
+                            <input class="form-control" name="password" type="password">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-md-3 control-label" for="confirmPassword">Confirm password</label>
+                        <div class="col-sm-9">
+                            <input class="form-control" name="confirmPassword" type="password">
+                        </div>
+                    </div>
+                    {{#each metadata}}
+                        <div class="form-group">
+                            <label class="col-md-3 control-label" for="{{this.id}}">{{this.displayName}}</label>
+                            <div class="col-sm-9">
+                                {{#if this.optional}}
+                                    <input class="form-control" name="{{this.id}}" type="text">
+                                {{else}}
+                                    <input class="form-control" name="{{this.id}}" required="" type="text">
+                                {{/if}}
+                            </div>
+                        </div>
+                    {{/each}}
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-default" data-dismiss="modal" type="button">Close</button>
+                <button class="btn btn-primary" type="button">Save</button>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+<div class="modal fade" id="modal-remove-user">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button aria-label="Close" class="close" data-dismiss="modal" type="button"><span aria-hidden="true">&times;</span>
+                </button>
+                <h4 class="modal-title">Remove user</h4>
+            </div>
+            <div class="modal-body">
+                <form class="form-horizontal" role="form">
+                    <input class="form-control" name="userName" required="" type="hidden" readonly="">
+                </form>
+                Are you sure you want to remove user '<span id="remove-user-name">aaa</span>'?
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-default" data-dismiss="modal" type="button">Close</button>
+                <button class="btn btn-danger" type="button">Remove</button>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+{{#extend "scripts"}}
+    <script>
+        $(document).ready(function () {
+
+            function addOrEditUser(formName) {
+                return function (e) {
+                    e.preventDefault();
+                    const formJQuerySelector = formName + ' form';
+                    const $form = $(formJQuerySelector);
+                    $form.validate();
+                    if ($form.valid()) {
+                        $.ajax({
+                            type: "POST",
+                            url: '{{paths.ADMIN}}',
+                            data: $(formJQuerySelector).serialize(),
+                            success: function () {
+                                $(formName).modal('hide');
+                                window.location.reload();
+                            }, error: function (xhr) {
+                                if (xhr.responseText) {
+                                    alert(xhr.responseText);
+                                }
+                                if (xhr.status == 440) {
+                                    window.location.reload();
+                                }
+                            }
+                        });
+                    }
+                };
+            }
+
+            $('#btn-add-user').click(function (e) {
+                e.preventDefault();
+                const $modal = $('#modal-add-user');
+                $modal.find('input[type=text]').val('');
+                $modal.find('input[type=password]').val('');
+                $modal.modal('show');
+            });
+
+            $('#modal-add-user .btn-primary').click(addOrEditUser('#modal-add-user'));
+
+            $('.users-table a.edit-user').click(function (e) {
+                e.preventDefault();
+                const el = e.target;
+                const data = [];
+                data.push({
+                    key: 'userName',
+                    value: el.dataset['username']
+                });
+                $('tr[data-username="' + e.target.dataset['username'] + '"] > td').each(function () {
+                    if (this.dataset) {
+                      data.push({
+                          key: this.dataset.field,
+                          value: this.dataset.value
+                      });
+                    }
+                });
+                const $modal = $('#modal-edit-user');
+                $modal.find('input[type=text]').val('');
+                $modal.find('input[type=password]').val('');
+                data.forEach(d => {
+                    $modal.find('input[name=' + d.key + ']').val(d.value);
+                });
+                $modal.modal('show');
+            });
+
+            $('#modal-edit-user .btn-primary').click(addOrEditUser('#modal-edit-user'));
+
+            $('.users-table a.remove-user').click(function (e) {
+                e.preventDefault();
+                const el = e.target;
+                const $modal = $('#modal-remove-user');
+                const userNameSpan = $('#remove-user-name');
+                $modal.find('input[name=userName]').val(el.dataset['username']);
+                $(userNameSpan).text(el.dataset['username']);
+                $modal.modal('show');
+            });
+
+            $('#modal-remove-user .btn-danger').click(function (e) {
+                e.preventDefault();
+                const $form = $('#modal-remove-user form');
+                $form.validate();
+                if ($form.valid()) {
+                    $.ajax({
+                        type: "DELETE",
+                        url: '{{paths.ADMIN}}',
+                        data: $('#modal-remove-user form').serialize(),
+                        success: function () {
+                            $('#modal-remove-user').modal('hide');
+                            window.location.reload();
+                        }, error: function (xhr) {
+                            if (xhr.responseText) {
+                                alert(xhr.responseText);
+                            }
+                            if (xhr.status == 440) {
+                                window.location.reload();
+                            }
+                        }
+                    });
+                }
+            });
+        });
+
+        $('#btn-sign-out').click(function (e) {
+            e.preventDefault();
+            window.location.href = '{{paths.SIGN_OUT}}';
+        });
+    </script>
+{{/extend}}
