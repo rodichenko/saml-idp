@@ -176,3 +176,7 @@ body {
   padding: 10px 5px;
   border-bottom: 1px solid #eee;
 }
+
+.users-table td[data-field=groups] {
+  width: 15%;
+}

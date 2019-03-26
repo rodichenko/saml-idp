@@ -265,6 +265,16 @@ function defaultCommand(a) {
         required: false,
         string: true,
         alias: 'pd'
+      },
+      adminGroup: {
+        description: 'Name of administrator\'s group',
+        default: 'admins',
+        required: false,
+        string: true,
+        alias: 'admins',
+        coerce: function (value) {
+          return value.toLowerCase();
+        }
       }
     })
     .example('\t$0 --acs http://acme.okta.com/auth/saml20/exampleidp --aud https://www.okta.com/saml2/service-provider/spf5aFRRXFGIMAYXQPNV', '')
@@ -1209,12 +1219,16 @@ function _runServer(argv) {
     }
   });
 
+  function userIsAdmin (user) {
+    return (user.groups || '').split(',').map(g => g.trim().toLowerCase()).indexOf(argv.adminGroup) >= 0;
+  }
+
   app.get([IDP_PATHS.ADMIN], function (req, res, next) {
     const user = findUser(argv.profileDatabase, req.session.currentUser);
     if (!user) {
       res.redirect('/?source=administration');
       return;
-    } else if ((user.groups || '').split(',').map(g => g.trim().toLowerCase()).indexOf('admins') === -1) {
+    } else if (!userIsAdmin(user)) {
       res.redirect('/?source=administration&error=' + encodeURIComponent('You have no permissions to manage users'));
       return;
     }
@@ -1233,7 +1247,7 @@ function _runServer(argv) {
     if (!user) {
       res.status(440).send('Session expired');
       return;
-    } else if ((user.groups || '').split(',').map(g => g.trim().toLowerCase()).indexOf('admins') === -1) {
+    } else if (!userIsAdmin(user)) {
       res.status(440).send('You have no permissions to manage users');
       return;
     }
@@ -1290,7 +1304,7 @@ function _runServer(argv) {
     if (!user) {
       res.status(440).send('Session expired');
       return;
-    } else if ((user.groups || '').split(',').map(g => g.trim().toLowerCase()).indexOf('admins') === -1) {
+    } else if (!userIsAdmin(user)) {
       res.status(440).send('You have no permissions to manage users');
       return;
     }

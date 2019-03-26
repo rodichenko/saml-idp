@@ -1,39 +1,54 @@
 <table class="users-table" id="users-table">
-    <tr>
-        <th>User name</th>
-        {{#each metadata}}
-            <th>{{this.displayName}}</th>
-        {{/each}}
-        <th class="text-right">
-            <button id="btn-add-user" class="btn btn-primary" style="cursor: pointer">
-                <i class="fa fa-plus"><span>Add user</span></i>
-            </button>
-            <button id="btn-sign-out" class="btn btn-primary" style="cursor: pointer">
-                <i class="fa fa-sign-out"><span>Sign out</span></i>
-            </button>
-        </th>
-    </tr>
-    {{#each users}}
-        <tr data-username="{{this.userName}}">
-            <td data-field="userName" data-value="{{this.userName}}">{{this.userName}}</td>
-            {{#each ../metadata}}
-                <td data-field="{{this.id}}" data-value="{{getProperty this.id ..}}">{{getProperty this.id
-                                                                                                   ..}}</td>
+    <thead>
+        <tr>
+            <th>User name</th>
+            {{#each metadata}}
+                <th>{{this.displayName}}</th>
             {{/each}}
-            <td class="text-right" style="padding-right: 20px">
-                <a class="edit-user"
-                   style="cursor: pointer"
-                   data-username="{{this.userName}}">
-                    Edit
-                </a>
-                <a class="remove-user"
-                   style="cursor: pointer; color: red; margin-left: 5px"
-                   data-username="{{this.userName}}">
-                    Remove
-                </a>
-            </td>
+            <th class="text-right">
+                <button id="btn-add-user" class="btn btn-primary" style="cursor: pointer">
+                    <i class="fa fa-plus"><span>Add user</span></i>
+                </button>
+                <button id="btn-sign-out" class="btn btn-primary" style="cursor: pointer">
+                    <i class="fa fa-sign-out"><span>Sign out</span></i>
+                </button>
+            </th>
         </tr>
-    {{/each}}
+        <tr>
+            <th colspan="{{arrayLength metadata 2}}">
+                <input
+                        id="users-search"
+                        style="line-height: 1; height: 30px;"
+                        class="form-control"
+                        type="text"
+                        placeholder="Search users"
+                        aria-label="Search users">
+            </th>
+        </tr>
+    </thead>
+    <tbody>
+        {{#each users}}
+            <tr data-user="true" data-username="{{this.userName}}">
+                <td data-field="userName" data-value="{{this.userName}}">{{this.userName}}</td>
+                {{#each ../metadata}}
+                    <td data-field="{{this.id}}" data-value="{{getProperty this.id ..}}">{{getProperty this.id
+                                                                                                       ..}}</td>
+                {{/each}}
+                <td class="text-right" style="padding-right: 20px">
+                    <a class="edit-user"
+                       style="cursor: pointer"
+                       data-username="{{this.userName}}">
+                        Edit
+                    </a>
+                    <a class="remove-user"
+                       style="cursor: pointer; color: red; margin-left: 5px"
+                       data-username="{{this.userName}}">
+                        Remove
+                    </a>
+                </td>
+            </tr>
+        {{/each}}
+    </tbody>
 </table>
 <div class="modal fade" id="modal-add-user">
     <div class="modal-dialog">
@@ -261,6 +276,26 @@
         $('#btn-sign-out').click(function (e) {
             e.preventDefault();
             window.location.href = '{{paths.SIGN_OUT}}';
+        });
+
+        $('#users-search').change(function (e) {
+            const searchString = (e.target.value || '').toLowerCase();
+            function userMatches (row) {
+                let matches = false;
+                $(row).find('td').each(function () {
+                    if (this.dataset && this.dataset.value && this.dataset.value.toLowerCase().indexOf(searchString) >= 0) {
+                        matches = true;
+                    }
+                });
+                return matches;
+            }
+            $('tr[data-user=true]').each(function () {
+                if (!searchString || userMatches(this)) {
+                    this.style.display = 'table-row';
+                } else {
+                    this.style.display = 'none';
+                }
+            });
         });
     </script>
 {{/extend}}
