@@ -3,45 +3,45 @@
  */
 
 .form-control-static {
-	overflow-wrap: break-word;
+    overflow-wrap: break-word;
 }
 
 i.fa span {
-  font-family: "Lato", "Helvetica Neue", Helvetica, Arial, sans-serif;
-  margin-left: 5px;
+    font-family: "Lato", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    margin-left: 5px;
 }
 
 .panel-primary {
-  border-color: #2796dd;
-  color: #333;
+    border-color: #2796dd;
+    color: #333;
 }
 
 .panel-primary .btn-primary {
-  background-color: #2796dd;
-  border: none;
+    background-color: #2796dd;
+    border: none;
 }
 
 .panel-title img {
-  height: 20px;
+    height: 20px;
 }
 
 .panel-primary > .panel-heading {
-  background-color: #2796dd;
-  border-color: #2796dd;
-  color: #ecf0f1;
+    background-color: #2796dd;
+    border-color: #2796dd;
+    color: #ecf0f1;
 }
 
 .panel-primary > .panel-heading a {
-  color: #ecf0f1;
+    color: #ecf0f1;
 }
 
 .panel-default .panel-heading a {
-  color: #2c3e50;
+    color: #2c3e50;
 }
 
 .navbar-default .navbar-text {
-  color: #ECF0F1;
-  font-weight: 500;
+    color: #ECF0F1;
+    font-weight: 500;
 }
 
 
@@ -50,15 +50,15 @@ i.fa span {
  */
 
 .form-profile button {
-  margin-left: 10px;
+    margin-left: 10px;
 }
 
 .bootstrap-tagsinput .label-info {
-	background-color: #2796dd;
+    background-color: #2796dd;
 }
 
 .form-settings .control-label-break {
-  padding-top: 1px;
+    padding-top: 1px;
 }
 
 /**
@@ -66,117 +66,130 @@ i.fa span {
  */
 
 .bootstrap-tagsinput {
-  display: inline-block;
-  padding: 4px 6px;
-  vertical-align: middle;
-  width: 100%;
-  min-height: 43px;
-  line-height: 22px;
-  cursor: text;
-  color: #2c3e50;
-  background-color: #ffffff;
-  background-image: none;
-  border: 1px solid #dce4ec;
-  border-radius: 4px;
-  -webkit-box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075);
-  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075);
+    display: inline-block;
+    padding: 4px 6px;
+    vertical-align: middle;
+    width: 100%;
+    min-height: 43px;
+    line-height: 22px;
+    cursor: text;
+    color: #2c3e50;
+    background-color: #ffffff;
+    background-image: none;
+    border: 1px solid #dce4ec;
+    border-radius: 4px;
+    -webkit-box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075);
+    box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075);
 }
 
 .bootstrap-tagsinput input {
-  border: none;
-  box-shadow: none;
-  outline: none;
-  background-color: transparent;
-  padding: 0 6px;
-  margin: 4px 0 0 0;
-  width: auto !important;
-  max-width: inherit;
-  font-size: 14px;
+    border: none;
+    box-shadow: none;
+    outline: none;
+    background-color: transparent;
+    padding: 0 6px;
+    margin: 4px 0 0 0;
+    width: auto !important;
+    max-width: inherit;
+    font-size: 14px;
 }
 
 .bootstrap-tagsinput.form-control input::-moz-placeholder {
-  color: #777;
-  opacity: 1;
+    color: #777;
+    opacity: 1;
 }
 
 .bootstrap-tagsinput.form-control input:-ms-input-placeholder {
-  color: #777;
+    color: #777;
 }
 
 .bootstrap-tagsinput.form-control input::-webkit-input-placeholder {
-  color: #777;
+    color: #777;
 }
 
 .bootstrap-tagsinput input:focus {
-  border: none;
-  box-shadow: none;
+    border: none;
+    box-shadow: none;
 }
 
 .bootstrap-tagsinput .tag {
-  margin-right: 2px;
-  color: white;
-  display: inline-block;
-  font-size: 100%;
-	margin-bottom: 3px;
-	margin-top: 3px;
+    margin-right: 2px;
+    color: white;
+    display: inline-block;
+    font-size: 100%;
+    margin-bottom: 3px;
+    margin-top: 3px;
 }
 
 .bootstrap-tagsinput .tag [data-role="remove"] {
-  margin-left: 8px;
-  cursor: pointer;
+    margin-left: 8px;
+    cursor: pointer;
 }
 
 .bootstrap-tagsinput .tag [data-role="remove"]:after {
-  content: "x";
-  padding: 0px 2px;
+    content: "x";
+    padding: 0px 2px;
 }
 
 .bootstrap-tagsinput .tag [data-role="remove"]:hover {
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 1px 2px rgba(0, 0, 0, 0.05);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .bootstrap-tagsinput .tag [data-role="remove"]:hover:active {
-  box-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125);
+    box-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125);
 }
 
 body {
-  width: 100vw;
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-around;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
 }
 
 .log-in-error {
-  display: flex;
-  flex-direction: row;
-  justify-content: space-around;
-  color: red;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+    color: red;
 }
 
 .error-container {
-  padding: 20px;
-  background-color: #fbf2f2;
-  border-radius: 5px;
-  border-color: #fbb6b4;
+    padding: 20px;
+    background-color: #fbf2f2;
+    border-radius: 5px;
+    border-color: #fbb6b4;
 }
 
 .users-table {
-  width: 100%;
-  border-collapse: collapse;
+    width: 100%;
+    border-collapse: collapse;
 }
 
 .users-table th {
-  background-color: #2b669a;
-  color: white;
-  padding: 5px;
+    background-color: #2b669a;
+    color: white;
+    padding: 5px;
 }
 
 .users-table td {
-  padding: 10px 5px;
-  border-bottom: 1px solid #eee;
+    padding: 10px 5px;
+    border-bottom: 1px solid #eee;
 }
 
 .users-table td[data-field=groups] {
-  width: 15%;
+    width: 15%;
+}
+
+.users-table tr[data-user=true] {
+    cursor: pointer;
+    -webkit-transition: background-color 250ms;
+    -moz-transition: background-color 250ms;
+    -ms-transition: background-color 250ms;
+    -o-transition: background-color 250ms;
+    transition: background-color 250ms;
+}
+
+.users-table tr[data-user=true]:hover {
+    background-color: rgba(70, 174, 255, 0.15);
 }

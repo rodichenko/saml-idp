@@ -213,13 +213,14 @@
 
             $('.users-table a.edit-user').click(function (e) {
                 e.preventDefault();
+                e.stopPropagation();
                 const el = e.target;
                 const data = [];
                 data.push({
                     key: 'userName',
                     value: el.dataset['username']
                 });
-                $('tr[data-username="' + e.target.dataset['username'] + '"] > td').each(function () {
+                $('tr[data-username="' + el.dataset['username'] + '"] > td').each(function () {
                     if (this.dataset) {
                       data.push({
                           key: this.dataset.field,
@@ -237,9 +238,34 @@
             });
 
             $('#modal-edit-user .btn-primary').click(addOrEditUser('#modal-edit-user'));
+            $('#users-table tr[data-user=true]').click(function (e) {
+                e.preventDefault();
+                const el = e.target.parentNode;
+                const data = [];
+                data.push({
+                    key: 'userName',
+                    value: el.dataset['username']
+                });
+                $('tr[data-username="' + el.dataset['username'] + '"] > td').each(function () {
+                    if (this.dataset) {
+                        data.push({
+                            key: this.dataset.field,
+                            value: this.dataset.value
+                        });
+                    }
+                });
+                const $modal = $('#modal-edit-user');
+                $modal.find('input[type=text]').val('');
+                $modal.find('input[type=password]').val('');
+                data.forEach(d => {
+                    $modal.find('input[name=' + d.key + ']').val(d.value);
+                });
+                $modal.modal('show');
+            });
 
             $('.users-table a.remove-user').click(function (e) {
                 e.preventDefault();
+                e.stopPropagation();
                 const el = e.target;
                 const $modal = $('#modal-remove-user');
                 const userNameSpan = $('#remove-user-name');
