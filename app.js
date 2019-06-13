@@ -8,6 +8,7 @@ const express             = require('express'),
       fs                  = require('fs'),
       http                = require('http'),
       https               = require('https'),
+      crypto              = require('crypto'),
       path                = require('path'),
       extend              = require('extend'),
       hbs                 = require('hbs'),
@@ -213,6 +214,13 @@ function defaultCommand(a) {
         required: true,
         boolean: true,
         default: false
+      },
+      enableTLS1: {
+        description: 'Enables TLS v1.0',
+        required: true,
+        boolean: true,
+        default: false,
+        alias: 'tls1'
       },
       signResponse: {
         description: 'Enables signing of responses',
@@ -737,14 +745,17 @@ function processArgs(args, options) {
 
 function _runServer(argv) {
   const app = express();
+  const {constants} = crypto;
+  const secureOptions = argv.enableTLS1 ? { } : { secureOptions: constants.SSL_OP_NO_TLSv1 };
   const httpServer = argv.https ?
-    https.createServer({ key: argv.httpsPrivateKey, cert: argv.httpsCert }, app) :
+    https.createServer({ key: argv.httpsPrivateKey, cert: argv.httpsCert, ...secureOptions }, app) :
     http.createServer(app);
   const blocks = {};
 
   console.log();
   console.log('Listener Port:\n\t' + argv.port);
   console.log('HTTPS Enabled:\n\t' + argv.https);
+  console.log('TLS1 Enabled:\n\t' + argv.enableTLS1);
   console.log();
   console.log('[IdP]');
   console.log();
